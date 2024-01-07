@@ -1,0 +1,47 @@
+name: Update Simple Index
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  RELEASE_TAG: index
+
+jobs:
+  deploy:
+    name: Build Simple Index Pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Github CLI
+        uses: sersoft-gmbh/setup-gh-cli-action@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dumb-pypi
+        run: pip install https://github.com/chriskuehl/dumb-pypi/archive/refs/tags/v1.15.0.tar.gz
+
+      - name: Build Index
+        run: |
+          dumb-pypi --output-dir build \
+          --title "Odoo Contrib Pypi" \
+          --packages-url https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }} \
+          --package-list-json <(gh api /repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_TAG }} --jq '.assets[]| {filename: .name, upload_timestamp: .updated_at|fromdateiso8601, uploaded_by: .uploader.login}')
+
+      - name: Upload Page Artifacts
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: build
+
+      - name: Deploy Github Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
