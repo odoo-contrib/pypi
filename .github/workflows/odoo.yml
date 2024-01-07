@@ -1,0 +1,60 @@
+name: Publish Odoo Packages
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  "0 8 * * 1"
+
+env:
+  RELEASE_TAG: index
+
+jobs:
+  build:
+    name: Build Odoo Packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        odoo_version:
+          - "17.0"
+          - "16.0"
+          - "15.0"
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Wheel
+        run: pip install wheel
+
+      - name: Set Date
+        id: set_date
+        run: |
+          today=$(date -u +%Y%m%d -d '-8 hours')
+          echo "date=$today" >> "$GITHUB_OUTPUT"
+
+      - name: Build Wheel
+        run: |
+          tar_file=odoo_${{ matrix.odoo_version }}.${{ steps.set_date.outputs.date }}.tar.gz
+          wget https://nightly.odoo.com/${{ matrix.odoo_version }}/nightly/tgz/$tar_file
+          mkdir odoo
+          tar -xvf $tar_file -C odoo --strip-components=1
+          cd odoo
+          python3 setup.py -q bdist_wheel
+
+      - name: Upload Artifacts
+        uses: AButler/upload-release-assets@v3.0
+        with:
+          repo-token: ${{ github.token }}
+          release-tag: ${{ env.RELEASE_TAG }}
+          files: odoo/dist/*
+
+  publish:
+    name: Publish Packages
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pypi.yml
