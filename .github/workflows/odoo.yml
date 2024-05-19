@@ -3,15 +3,18 @@ name: Publish Odoo Packages
 on:
   workflow_dispatch:
   schedule:
-    - cron:  "0 8 * * 1"
+    - cron: "0 8 * * 1"
 
 env:
-  RELEASE_TAG: index
+  AWS_S3_ENDPOINT_URL: https://86099e5f6de2cd6346db01f48072efa4.r2.cloudflarestorage.com
+  MC_ALIAS: r2
+  BUCKET: wheelhouse
+  BUCKET_ACCESS_URL: https://wheelhouse.kafai.eu.org
 
 jobs:
   build:
     name: Build Odoo Packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     strategy:
@@ -21,6 +24,14 @@ jobs:
           - "16.0"
           - "15.0"
     steps:
+      - name: Setup Minio CLI
+        uses: hostwithquantum/setup-mc@main
+        with:
+          alias-name: ${{ env.MC_ALIAS }}
+          alias-url: ${{ env.AWS_S3_ENDPOINT_URL }}
+          alias-access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          alias-secret-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -45,11 +56,9 @@ jobs:
           python3 setup.py -q bdist_wheel
 
       - name: Upload Artifacts
-        uses: AButler/upload-release-assets@v3.0
-        with:
-          repo-token: ${{ github.token }}
-          release-tag: ${{ env.RELEASE_TAG }}
-          files: odoo/dist/*
+        run: |
+          cd odoo/dist
+          mc cp --recursive ./* ${{ env.MC_ALIAS }}/${{ env.BUCKET }}
 
   publish:
     name: Publish Packages
@@ -57,4 +66,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     uses: ./.github/workflows/pypi.yml

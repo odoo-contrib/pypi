@@ -3,15 +3,22 @@ name: Update Simple Index
 on:
   workflow_dispatch:
   workflow_call:
-
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 env:
   GH_TOKEN: ${{ github.token }}
-  RELEASE_TAG: index
+  AWS_S3_ENDPOINT_URL: https://86099e5f6de2cd6346db01f48072efa4.r2.cloudflarestorage.com
+  MC_ALIAS: r2
+  BUCKET: wheelhouse
+  BUCKET_ACCESS_URL: https://wheelhouse.kafai.eu.org
 
 jobs:
   deploy:
     name: Build Simple Index Pages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       pages: write
       id-token: write
@@ -19,8 +26,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Setup Github CLI
-        uses: sersoft-gmbh/setup-gh-cli-action@v2
+      - name: Setup Minio CLI
+        uses: hostwithquantum/setup-mc@main
+        with:
+          alias-name: ${{ env.MC_ALIAS }}
+          alias-url: ${{ env.AWS_S3_ENDPOINT_URL }}
+          alias-access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          alias-secret-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Connect Bucket
+        run: mc alias set ${{ env.MC_ALIAS }} ${{ env.AWS_S3_ENDPOINT_URL }} ${{ secrets.AWS_ACCESS_KEY_ID }} ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -28,14 +43,18 @@ jobs:
           python-version: "3.11"
 
       - name: Install dumb-pypi
-        run: pip install https://github.com/chriskuehl/dumb-pypi/archive/refs/tags/v1.15.0.tar.gz
+        run: pip install dumb-pypi
 
       - name: Build Index
         run: |
+          mc ls ${{ env.MC_ALIAS }}/${{ env.BUCKET }} --json | jq -c '{filename: .key, upload_timestamp: .lastModified|sub("\\.[0-9]*";"")|fromdate}' > package-list.jsonl
+          cat package-list.jsonl
           dumb-pypi --output-dir build \
           --title "Odoo Contrib Pypi" \
-          --packages-url https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }} \
-          --package-list-json <(gh api /repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_TAG }} --jq '.assets[]| {filename: .name, upload_timestamp: .updated_at|fromdateiso8601, uploaded_by: .uploader.login}')
+          --packages-url ${{ env.BUCKET_ACCESS_URL }} \
+          --package-list-json package-list.jsonl
+        env:
+          TZ: ETC/UTC
 
       - name: Upload Page Artifacts
         uses: actions/upload-pages-artifact@v2
