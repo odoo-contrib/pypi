@@ -38,7 +38,7 @@ jobs:
         run: mc alias set ${{ env.MC_ALIAS }} ${{ env.AWS_S3_ENDPOINT_URL }} ${{ secrets.AWS_ACCESS_KEY_ID }} ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
