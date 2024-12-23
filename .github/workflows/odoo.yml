@@ -3,7 +3,7 @@ name: Publish Odoo Packages
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * 1"
+    - cron: "0 8 1 * *"
 
 env:
   AWS_S3_ENDPOINT_URL: https://86099e5f6de2cd6346db01f48072efa4.r2.cloudflarestorage.com
