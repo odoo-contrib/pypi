@@ -58,7 +58,7 @@ jobs:
       - name: Upload Artifacts
         run: |
           cd odoo/dist
-          mc cp --recursive ./* ${{ env.MC_ALIAS }}/${{ env.BUCKET }}
+          mc cp --recursive --attr="content-type=application/zip" ./* ${{ env.MC_ALIAS }}/${{ env.BUCKET }}
 
   publish:
     name: Publish Packages
