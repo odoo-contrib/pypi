@@ -49,7 +49,7 @@ jobs:
       - name: Build Wheel
         run: |
           tar_file=odoo_${{ matrix.odoo_version }}.${{ steps.set_date.outputs.date }}.tar.gz
-          wget https://nightly.odoo.com/${{ matrix.odoo_version }}/nightly/tgz/$tar_file
+          wget -nv https://nightly.odoo.com/${{ matrix.odoo_version }}/nightly/tgz/$tar_file
           mkdir odoo
           tar -xvf $tar_file -C odoo --strip-components=1
           cd odoo
