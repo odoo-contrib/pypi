@@ -20,8 +20,7 @@ jobs:
     strategy:
       matrix:
         odoo_version:
-          - "18.0"
-          - "17.0"
+          - "16.0"
     steps:
       - name: Setup Minio CLI
         uses: hostwithquantum/setup-mc@main
@@ -42,7 +41,8 @@ jobs:
       - name: Set Date
         id: set_date
         run: |
-          today=$(date -u +%Y%m%d -d '-8 hours')
+          # today=$(date -u +%Y%m%d -d '-8 hours')
+          today=20250807
           echo "date=$today" >> "$GITHUB_OUTPUT"
 
       - name: Build Wheel
