@@ -20,9 +20,9 @@ jobs:
     strategy:
       matrix:
         odoo_version:
+          - "19.0"
           - "18.0"
           - "17.0"
-          - "16.0"
     steps:
       - name: Setup Minio CLI
         uses: hostwithquantum/setup-mc@main
